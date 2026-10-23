@@ -1,0 +1,86 @@
+# ==============================================================================
+# LINGUA - Root .gitignore
+# ==============================================================================
+
+# --- Python & Bytecode ---
+__pycache__/
+__init__.py/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+
+# --- Entornos Virtuales ---
+.venv/
+venv/
+ENV/
+env/
+
+# --- Variables de Entorno y Secretos ---
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
+
+# --- Bases de Datos Locales ---
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
+# --- Archivos Multimedia y Grabaciones de Audio (Uso exclusivo de Storage) ---
+*.wav
+*.mp3
+*.ogg
+*.flac
+*.m4a
+*.aac
+media/
+uploads/
+recordings/
+
+# --- Pruebas y Cobertura ---
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Editores e IDEs ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.bak
+
+# --- Frontend y Node ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.turbo/
+.vite/
+
+# --- Sistema Operativo ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
