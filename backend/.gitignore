@@ -1,0 +1,111 @@
+# ==============================================================================
+# LINGUA - .gitignore (Backend & General)
+# ==============================================================================
+
+# --- Python & Bytecode ---
+__pycache__/
+__init__.py/
+
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# --- Entornos Virtuales ---
+.venv/
+venv/
+ENV/
+env/
+.env_*/
+
+# --- Variables de Entorno y Secretos ---
+# Se ignora cualquier archivo .env excepto la plantilla .env.example
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+!.env.example
+*.pem
+*.key
+*.cert
+*.crt
+
+# --- Bases de Datos Locales y Temporales ---
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+*.sql.gz
+
+# --- Archivos Multimedia y Audios Locales (Deben ir a Supabase Storage) ---
+*.wav
+*.mp3
+*.ogg
+*.flac
+*.m4a
+*.aac
+media/
+uploads/
+recordings/
+
+# --- Pruebas, Cobertura y Linters ---
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# --- Logs y Diagnóstico ---
+*.log
+logs/
+*.pid
+
+# --- Editores e IDEs ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.bak
+*.tmp
+
+# --- Supabase CLI Local ---
+.supabase/
+supabase/.temp/
+supabase/.branches/
+
+# --- Frontend y Node (para coexistencia en el repositorio) ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.turbo/
+.vite/
+
+# --- Sistema Operativo ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
