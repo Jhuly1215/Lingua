@@ -23,6 +23,7 @@ from app.db.models.catalogs import AphasiaType, SeverityLevel
 from app.db.models.protocol import Protocol
 from app.db.models.role import Role
 from app.db.models.subtest import Subtest
+from app.db.models.user import User
 from app.db.session import AsyncSessionLocal
 
 logger = setup_logging("INFO")
@@ -196,6 +197,27 @@ async def seed_all(session: AsyncSession) -> None:
             logger.info("Subprueba '%s' asociada a FAS.", sub_item["name"])
     else:
         logger.info("Protocolo FAS ya existe en la base de datos.")
+
+    # 5. Usuario Profesional Demo (para pruebas interactivas en Swagger UI)
+    logger.info("Verificando usuario profesional demo...")
+    prof_role_stmt = select(Role).where(Role.name == "professional")
+    prof_role = (await session.execute(prof_role_stmt)).scalars().first()
+    if prof_role:
+        demo_user_id = uuid.UUID("11111111-1111-1111-1111-111111111111")
+        user_stmt = select(User).where(User.user_id == demo_user_id)
+        existing_user = (await session.execute(user_stmt)).scalars().first()
+        if not existing_user:
+            demo_user = User(
+                user_id=demo_user_id,
+                role_id=prof_role.role_id,
+                username="evaluador_demo",
+                email="evaluador@lingua.neurotech.org",
+                password_hash="argon2_placeholder_hash",
+                first_name="Elena",
+                last_name="Torres",
+            )
+            session.add(demo_user)
+            logger.info("Usuario demo 'evaluador@lingua.neurotech.org' (rol 'professional') preparado.")
 
     await session.commit()
     logger.info("Población de catálogos completada con éxito.")

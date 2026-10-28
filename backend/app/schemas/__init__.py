@@ -29,6 +29,16 @@ from app.schemas.evaluation import (
     EvaluationSubtestResponse,
 )
 
+from app.schemas.response import (
+    FASErrorType,
+    ResponseItemCreate,
+    FASConditionResponsesCreate,
+    ResponseResponse,
+    FASErrorsBreakdown,
+    FASConditionScoreResponse,
+    FASEvaluationSummaryResponse,
+)
+
 __all__ = [
     "PaginatedResponse",
     "ErrorDetail",
@@ -57,4 +67,11 @@ __all__ = [
     "EvaluationDetailResponse",
     "EvaluationSubtestCreate",
     "EvaluationSubtestResponse",
+    "FASErrorType",
+    "ResponseItemCreate",
+    "FASConditionResponsesCreate",
+    "ResponseResponse",
+    "FASErrorsBreakdown",
+    "FASConditionScoreResponse",
+    "FASEvaluationSummaryResponse",
 ]
