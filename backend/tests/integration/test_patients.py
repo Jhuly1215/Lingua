@@ -8,7 +8,7 @@ async def test_patient_crud_flow(client: AsyncClient, professional_token: str):
     """Prueba el ciclo de vida completo de un paciente (Crear, Consultar, Listar, Actualizar, Borrado lógico)."""
     headers = {"Authorization": f"Bearer {professional_token}"}
 
-    # 1. Crear Paciente
+    # 1. Crear Paciente con variables clínicas basales completas
     create_payload = {
         "patient_code": "PAC-2026-0001",
         "first_name": "Elena",
@@ -30,6 +30,8 @@ async def test_patient_crud_flow(client: AsyncClient, professional_token: str):
     created_data = create_res.json()
     patient_id = created_data["patient_id"]
     assert created_data["patient_code"] == "PAC-2026-0001"
+    assert created_data["education_years"] == 14
+    assert created_data["handedness"] == "Diestro"
     assert created_data["active"] is True
 
     # 2. Consultar por ID
@@ -44,14 +46,24 @@ async def test_patient_crud_flow(client: AsyncClient, professional_token: str):
     assert list_data["total"] >= 1
     assert any(p["patient_id"] == patient_id for p in list_data["items"])
 
-    # 4. Actualizar parcialmente (PATCH)
+    # 4. Actualizar parcialmente (PATCH) de variables clínicas
     patch_payload = {
         "occupation": "Contadora jubilada",
+        "education_years": 16,
+        "handedness": "Ambidiestro",
+        "bilingual": True,
+        "secondary_language": "Inglés",
+        "clinical_background": "Dislipidemia, hipertensión grado 1, antecedente de AIT en 2024",
         "notes": "Seguimiento acordado para la próxima semana",
     }
     patch_res = await client.patch(f"/api/v1/patients/{patient_id}", json=patch_payload, headers=headers)
     assert patch_res.status_code == 200
-    assert patch_res.json()["occupation"] == "Contadora jubilada"
+    patch_data = patch_res.json()
+    assert patch_data["occupation"] == "Contadora jubilada"
+    assert patch_data["education_years"] == 16
+    assert patch_data["handedness"] == "Ambidiestro"
+    assert patch_data["bilingual"] is True
+    assert patch_data["secondary_language"] == "Inglés"
 
     # 5. Eliminación lógica
     del_res = await client.delete(f"/api/v1/patients/{patient_id}", headers=headers)
@@ -90,3 +102,18 @@ async def test_patient_not_found(client: AsyncClient, professional_token: str):
     response = await client.get(f"/api/v1/patients/{fake_uuid}", headers=headers)
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "ENTITY_NOT_FOUND"
+
+
+@pytest.mark.integration
+async def test_patient_negative_education_years_rejected(client: AsyncClient, professional_token: str):
+    """Verifica que años de educación negativos sean rechazados por validación."""
+    headers = {"Authorization": f"Bearer {professional_token}"}
+    payload = {
+        "patient_code": "PAC-NEG-EDU",
+        "first_name": "Jorge",
+        "last_name": "Valenzuela",
+        "date_of_birth": "1985-02-14",
+        "education_years": -3,
+    }
+    res = await client.post("/api/v1/patients", json=payload, headers=headers)
+    assert res.status_code == 422

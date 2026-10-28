@@ -4,7 +4,8 @@ from decimal import Decimal
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.protocol import SubtestResponse
+from app.schemas.clinical_event import ClinicalEventResponse
+from app.schemas.protocol import AphasiaTypeResponse, SeverityLevelResponse, SubtestResponse
 
 
 class EvaluationSubtestCreate(BaseModel):
@@ -72,7 +73,10 @@ class EvaluationResponse(EvaluationBase):
 
 
 class EvaluationDetailResponse(EvaluationResponse):
-    """Respuesta detallada que incluye las subpruebas asociadas."""
+    """Respuesta detallada que incluye las subpruebas asociadas y entidades clínicas contextuales."""
     evaluation_subtests: List[EvaluationSubtestResponse] = []
+    aphasia_type: Optional[AphasiaTypeResponse] = None
+    severity_level: Optional[SeverityLevelResponse] = None
+    clinical_event: Optional[ClinicalEventResponse] = None
 
     model_config = ConfigDict(from_attributes=True)

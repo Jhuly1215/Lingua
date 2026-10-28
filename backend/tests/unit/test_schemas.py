@@ -4,8 +4,8 @@ import uuid
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.clinical_event import ClinicalEventCreate
-from app.schemas.consent import ConsentCreate
+from app.schemas.clinical_event import ClinicalEventCreate, ClinicalEventUpdate
+from app.schemas.consent import ConsentCreate, ConsentUpdate
 from app.schemas.evaluation import EvaluationCreate, EvaluationSubtestCreate
 from app.schemas.patient import PatientCreate, PatientUpdate
 
@@ -64,6 +64,58 @@ def test_consent_create_valid_and_invalid_status():
             consent_date=datetime.now(timezone.utc),
             version="1.0",
         )
+
+
+@pytest.mark.unit
+def test_consent_create_empty_version_or_type_fails():
+    """Verifica que versiones o tipos vacíos disparen ValidationError."""
+    with pytest.raises(ValidationError):
+        ConsentCreate(
+            consent_type="RESEARCH",
+            consent_status="GRANTED",
+            consent_date=datetime.now(timezone.utc),
+            version="   ",
+        )
+
+    with pytest.raises(ValidationError):
+        ConsentCreate(
+            consent_type="   ",
+            consent_status="GRANTED",
+            consent_date=datetime.now(timezone.utc),
+            version="1.0",
+        )
+
+
+@pytest.mark.unit
+def test_clinical_event_create_empty_event_type_fails():
+    """Verifica que un tipo de evento clínico vacío dispare ValidationError."""
+    with pytest.raises(ValidationError):
+        ClinicalEventCreate(
+            event_type="   ",
+            event_date=date(2026, 5, 1),
+        )
+
+
+@pytest.mark.unit
+def test_evaluation_create_with_null_and_explicit_aphasia():
+    """Verifica que EvaluationCreate admita aphasia_type_id nulo u opciones UUID."""
+    proto_id = uuid.uuid4()
+    # Nulo
+    eval_null = EvaluationCreate(
+        protocol_id=proto_id,
+        aphasia_type_id=None,
+        evaluation_date=datetime.now(timezone.utc),
+    )
+    assert eval_null.aphasia_type_id is None
+
+    # Con UUID explícito
+    aph_id = uuid.uuid4()
+    eval_explicit = EvaluationCreate(
+        protocol_id=proto_id,
+        aphasia_type_id=aph_id,
+        evaluation_date=datetime.now(timezone.utc),
+    )
+    assert eval_explicit.aphasia_type_id == aph_id
 
 
 @pytest.mark.unit

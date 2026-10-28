@@ -50,8 +50,20 @@ class ProtocolRepository(BaseRepository[Protocol]):
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
+    async def get_aphasia_type_by_id(self, aphasia_type_id: uuid.UUID) -> Optional[AphasiaType]:
+        """Busca un tipo de afasia por su identificador único."""
+        stmt = select(AphasiaType).where(AphasiaType.aphasia_type_id == aphasia_type_id, AphasiaType.active == True)
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
     async def list_severity_levels(self) -> List[SeverityLevel]:
         """Lista el catálogo de niveles de severidad."""
         stmt = select(SeverityLevel).where(SeverityLevel.active == True).order_by(SeverityLevel.name.asc())
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
+
+    async def get_severity_level_by_id(self, severity_level_id: uuid.UUID) -> Optional[SeverityLevel]:
+        """Busca un nivel de severidad por su identificador único."""
+        stmt = select(SeverityLevel).where(SeverityLevel.severity_level_id == severity_level_id, SeverityLevel.active == True)
+        result = await self.session.execute(stmt)
+        return result.scalars().first()

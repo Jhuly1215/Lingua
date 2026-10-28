@@ -2,16 +2,16 @@ import uuid
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import EntityNotFoundException
+from app.core.exceptions import EntityNotFoundException, ValidationException
 from app.db.models.clinical_event import ClinicalEvent
 from app.repositories.clinical_event_repository import ClinicalEventRepository
 from app.repositories.patient_repository import PatientRepository
-from app.schemas.clinical_event import ClinicalEventCreate, ClinicalEventResponse
+from app.schemas.clinical_event import ClinicalEventCreate, ClinicalEventResponse, ClinicalEventUpdate
 
 
 class ClinicalEventService:
     """
-    Lógica de negocio para el registro y consulta de eventos clínicos neurológicos (US-03).
+    Lógica de negocio para el registro, consulta y actualización de eventos clínicos neurológicos (US-03).
     Diferencia severidad del evento y ubicación de la lesión.
     """
 
@@ -55,3 +55,42 @@ class ClinicalEventService:
 
         events = await self.event_repo.list_by_patient_id(patient_id, only_active=True)
         return [ClinicalEventResponse.model_validate(e) for e in events]
+
+    async def get_event_by_id(
+        self,
+        patient_id: uuid.UUID,
+        event_id: uuid.UUID,
+    ) -> ClinicalEventResponse:
+        """Consulta un evento clínico específico asegurando pertenencia al paciente."""
+        patient = await self.patient_repo.get_by_id(patient_id, only_active=True)
+        if not patient:
+            raise EntityNotFoundException("Paciente", patient_id)
+
+        event = await self.event_repo.get_by_id(event_id, only_active=True)
+        if not event or event.patient_id != patient_id:
+            raise EntityNotFoundException("Evento clínico", event_id)
+
+        return ClinicalEventResponse.model_validate(event)
+
+    async def update_event(
+        self,
+        patient_id: uuid.UUID,
+        event_id: uuid.UUID,
+        data: ClinicalEventUpdate,
+    ) -> ClinicalEventResponse:
+        """Actualiza variables de un evento neurológico preservando la integridad."""
+        patient = await self.patient_repo.get_by_id(patient_id, only_active=True)
+        if not patient:
+            raise EntityNotFoundException("Paciente", patient_id)
+
+        event = await self.event_repo.get_by_id(event_id, only_active=True)
+        if not event or event.patient_id != patient_id:
+            raise EntityNotFoundException("Evento clínico", event_id)
+
+        update_dict = data.model_dump(exclude_unset=True)
+        for key in ["event_type", "description", "event_severity", "lesion_location", "lesion_hemisphere"]:
+            if key in update_dict and isinstance(update_dict[key], str):
+                update_dict[key] = update_dict[key].strip()
+
+        updated_event = await self.event_repo.update(event, update_dict)
+        return ClinicalEventResponse.model_validate(updated_event)

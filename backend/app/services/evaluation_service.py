@@ -37,7 +37,7 @@ class EvaluationService:
         evaluator_id: uuid.UUID,
         data: EvaluationCreate,
     ) -> EvaluationResponse:
-        """Crea una nueva evaluación para un paciente validando protocolo y estado activo."""
+        """Crea una nueva evaluación para un paciente validando protocolo, evento clínico y catálogos."""
         # 1. Validar existencia y estado del paciente
         patient = await self.patient_repo.get_by_id(patient_id, only_active=True)
         if not patient:
@@ -53,6 +53,18 @@ class EvaluationService:
             event = await self.event_repo.get_by_id(data.clinical_event_id, only_active=True)
             if not event or event.patient_id != patient_id:
                 raise ValidationException("El evento clínico proporcionado no existe o no pertenece a este paciente.")
+
+        # 4. Validar tipo de afasia si fue proporcionado (permite None / no clasificada aún)
+        if data.aphasia_type_id is not None:
+            aphasia_type = await self.protocol_repo.get_aphasia_type_by_id(data.aphasia_type_id)
+            if not aphasia_type:
+                raise EntityNotFoundException("Tipo de afasia", data.aphasia_type_id)
+
+        # 5. Validar nivel de severidad si fue proporcionado
+        if data.severity_level_id is not None:
+            severity = await self.protocol_repo.get_severity_level_by_id(data.severity_level_id)
+            if not severity:
+                raise EntityNotFoundException("Nivel de severidad", data.severity_level_id)
 
         eval_obj = Evaluation(
             evaluation_id=uuid.uuid4(),
@@ -71,7 +83,7 @@ class EvaluationService:
         return EvaluationResponse.model_validate(saved_eval)
 
     async def get_evaluation_by_id(self, evaluation_id: uuid.UUID) -> EvaluationDetailResponse:
-        """Obtiene la evaluación completa con sus subpruebas asociadas."""
+        """Obtiene la evaluación completa con sus subpruebas asociadas y entidades contextuales."""
         evaluation = await self.eval_repo.get_by_id_detailed(evaluation_id)
         if not evaluation:
             raise EntityNotFoundException("Evaluación", evaluation_id)
@@ -91,12 +103,31 @@ class EvaluationService:
         evaluation_id: uuid.UUID,
         data: EvaluationUpdate,
     ) -> EvaluationResponse:
-        """Actualiza parcialmente los campos permitidos de una evaluación."""
+        """Actualiza parcialmente los campos permitidos de una evaluación con validación de integridad."""
         evaluation = await self.eval_repo.get_by_id(evaluation_id, only_active=True)
         if not evaluation:
             raise EntityNotFoundException("Evaluación", evaluation_id)
 
         update_dict = data.model_dump(exclude_unset=True)
+
+        if "clinical_event_id" in update_dict and update_dict["clinical_event_id"] is not None:
+            event = await self.event_repo.get_by_id(update_dict["clinical_event_id"], only_active=True)
+            if not event or event.patient_id != evaluation.patient_id:
+                raise ValidationException("El evento clínico proporcionado no existe o no pertenece a este paciente.")
+
+        if "aphasia_type_id" in update_dict and update_dict["aphasia_type_id"] is not None:
+            aphasia_type = await self.protocol_repo.get_aphasia_type_by_id(update_dict["aphasia_type_id"])
+            if not aphasia_type:
+                raise EntityNotFoundException("Tipo de afasia", update_dict["aphasia_type_id"])
+
+        if "severity_level_id" in update_dict and update_dict["severity_level_id"] is not None:
+            severity = await self.protocol_repo.get_severity_level_by_id(update_dict["severity_level_id"])
+            if not severity:
+                raise EntityNotFoundException("Nivel de severidad", update_dict["severity_level_id"])
+
+        if "general_observations" in update_dict and isinstance(update_dict["general_observations"], str):
+            update_dict["general_observations"] = update_dict["general_observations"].strip()
+
         updated_eval = await self.eval_repo.update(evaluation, update_dict)
         return EvaluationResponse.model_validate(updated_eval)
 
