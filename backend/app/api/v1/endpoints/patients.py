@@ -6,9 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models.user import User
 from app.dependencies.auth import get_current_user, require_professional_or_admin
 from app.dependencies.database import get_db
-from app.schemas.clinical_event import ClinicalEventCreate, ClinicalEventResponse
+from app.schemas.clinical_event import (
+    ClinicalEventCreate,
+    ClinicalEventResponse,
+    ClinicalEventUpdate,
+)
 from app.schemas.common import PaginatedResponse
-from app.schemas.consent import ConsentCreate, ConsentResponse
+from app.schemas.consent import ConsentCreate, ConsentResponse, ConsentUpdate
 from app.schemas.evaluation import EvaluationCreate, EvaluationResponse
 from app.schemas.patient import PatientCreate, PatientResponse, PatientUpdate
 from app.services.clinical_event_service import ClinicalEventService
@@ -132,6 +136,39 @@ async def create_patient_clinical_event(
     return await service.create_event(patient_id, data)
 
 
+@router.get(
+    "/{patient_id}/clinical-events/{clinical_event_id}",
+    response_model=ClinicalEventResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Consultar un evento clínico específico del paciente",
+)
+async def get_patient_clinical_event(
+    patient_id: uuid.UUID,
+    clinical_event_id: uuid.UUID,
+    current_user: User = Depends(require_professional_or_admin),
+    session: AsyncSession = Depends(get_db),
+) -> ClinicalEventResponse:
+    service = ClinicalEventService(session)
+    return await service.get_event_by_id(patient_id, clinical_event_id)
+
+
+@router.patch(
+    "/{patient_id}/clinical-events/{clinical_event_id}",
+    response_model=ClinicalEventResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Actualizar un evento clínico de un paciente",
+)
+async def update_patient_clinical_event(
+    patient_id: uuid.UUID,
+    clinical_event_id: uuid.UUID,
+    data: ClinicalEventUpdate,
+    current_user: User = Depends(require_professional_or_admin),
+    session: AsyncSession = Depends(get_db),
+) -> ClinicalEventResponse:
+    service = ClinicalEventService(session)
+    return await service.update_event(patient_id, clinical_event_id, data)
+
+
 # --- Sub-recursos de Paciente: Consentimiento Informado (US-04) ---
 
 @router.get(
@@ -163,6 +200,39 @@ async def create_patient_consent(
 ) -> ConsentResponse:
     service = ConsentService(session)
     return await service.create_consent(patient_id, data)
+
+
+@router.get(
+    "/{patient_id}/consents/{consent_id}",
+    response_model=ConsentResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Consultar un consentimiento específico del paciente",
+)
+async def get_patient_consent(
+    patient_id: uuid.UUID,
+    consent_id: uuid.UUID,
+    current_user: User = Depends(require_professional_or_admin),
+    session: AsyncSession = Depends(get_db),
+) -> ConsentResponse:
+    service = ConsentService(session)
+    return await service.get_consent_by_id(patient_id, consent_id)
+
+
+@router.patch(
+    "/{patient_id}/consents/{consent_id}",
+    response_model=ConsentResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Actualizar un consentimiento específico del paciente",
+)
+async def update_patient_consent(
+    patient_id: uuid.UUID,
+    consent_id: uuid.UUID,
+    data: ConsentUpdate,
+    current_user: User = Depends(require_professional_or_admin),
+    session: AsyncSession = Depends(get_db),
+) -> ConsentResponse:
+    service = ConsentService(session)
+    return await service.update_consent(patient_id, consent_id, data)
 
 
 # --- Sub-recursos de Paciente: Evaluaciones (US-05) ---

@@ -14,6 +14,7 @@ async def test_evaluation_and_subtest_workflow(client: AsyncClient, professional
     - Proteger contra asociaciones duplicadas (409)
     - Proteger contra subpruebas de protocolo ajeno (422)
     - Actualizar estado de evaluación
+    - Listar evaluaciones del paciente
     """
     headers = {"Authorization": f"Bearer {professional_token}"}
 
@@ -76,6 +77,14 @@ async def test_evaluation_and_subtest_workflow(client: AsyncClient, professional
     evaluation_id = evaluation_data["evaluation_id"]
     assert evaluation_data["status"] == "PENDING"
 
+    # Listar evaluaciones del paciente
+    patient_evals_res = await client.get(
+        f"/api/v1/patients/{patient_id}/evaluations",
+        headers=headers,
+    )
+    assert patient_evals_res.status_code == 200
+    assert len(patient_evals_res.json()) == 1
+
     # 5. Asociar Subprueba F con duración de 60 segundos
     sub_payload = {
         "subtest_id": subtest_f_id,
@@ -127,3 +136,178 @@ async def test_evaluation_and_subtest_workflow(client: AsyncClient, professional
     )
     assert patch_res.status_code == 200
     assert patch_res.json()["status"] == "COMPLETED"
+
+
+@pytest.mark.integration
+async def test_evaluation_aphasia_null_mixta_no_clasificada(client: AsyncClient, professional_token: str):
+    """
+    Verifica que:
+    1. Una evaluación se pueda crear sin clasificar la afasia (aphasia_type_id = None).
+    2. Se pueda clasificar explícitamente como 'Mixta'.
+    3. Se pueda clasificar explícitamente como 'No clasificada'.
+    4. Se distinga claramente entre clasificación ausente (NULL) y explícita.
+    """
+    headers = {"Authorization": f"Bearer {professional_token}"}
+
+    # 1. Crear Paciente
+    patient_res = await client.post(
+        "/api/v1/patients",
+        json={
+            "patient_code": "PAC-APH-CAT-01",
+            "first_name": "Manuel",
+            "last_name": "Ortiz",
+            "date_of_birth": "1958-10-05",
+        },
+        headers=headers,
+    )
+    assert patient_res.status_code == 201
+    patient_id = patient_res.json()["patient_id"]
+
+    # 2. Obtener IDs de protocolo y catálogos
+    proto_res = await client.get("/api/v1/protocols", headers=headers)
+    protocol_id = proto_res.json()[0]["protocol_id"]
+
+    aphasia_res = await client.get("/api/v1/catalogs/aphasia-types", headers=headers)
+    aphasias = aphasia_res.json()
+    mixta = next(a for a in aphasias if a["name"] == "Mixta")
+    no_clasificada = next(a for a in aphasias if a["name"] == "No clasificada")
+
+    # Escenario A: Evaluación con afasia nula (sin clasificación inicial)
+    eval_null_res = await client.post(
+        f"/api/v1/patients/{patient_id}/evaluations",
+        json={
+            "protocol_id": protocol_id,
+            "aphasia_type_id": None,
+            "evaluation_date": "2026-10-22T10:00:00Z",
+            "general_observations": "Evaluación preliminar sin clasificación diagnóstica",
+        },
+        headers=headers,
+    )
+    assert eval_null_res.status_code == 201
+    eval_null_data = eval_null_res.json()
+    assert eval_null_data["aphasia_type_id"] is None
+
+    detail_null_res = await client.get(f"/api/v1/evaluations/{eval_null_data['evaluation_id']}", headers=headers)
+    assert detail_null_res.status_code == 200
+    assert detail_null_res.json()["aphasia_type"] is None
+
+    # Escenario B: Evaluación clasificada como 'Mixta'
+    eval_mixta_res = await client.post(
+        f"/api/v1/patients/{patient_id}/evaluations",
+        json={
+            "protocol_id": protocol_id,
+            "aphasia_type_id": mixta["aphasia_type_id"],
+            "evaluation_date": "2026-10-22T11:00:00Z",
+            "general_observations": "Presenta características de fluencia y comprensión alteradas",
+        },
+        headers=headers,
+    )
+    assert eval_mixta_res.status_code == 201
+    eval_mixta_data = eval_mixta_res.json()
+    assert eval_mixta_data["aphasia_type_id"] == mixta["aphasia_type_id"]
+
+    detail_mixta_res = await client.get(f"/api/v1/evaluations/{eval_mixta_data['evaluation_id']}", headers=headers)
+    assert detail_mixta_res.status_code == 200
+    assert detail_mixta_res.json()["aphasia_type"]["name"] == "Mixta"
+
+    # Escenario C: Evaluación clasificada explícitamente como 'No clasificada'
+    eval_noclas_res = await client.post(
+        f"/api/v1/patients/{patient_id}/evaluations",
+        json={
+            "protocol_id": protocol_id,
+            "aphasia_type_id": no_clasificada["aphasia_type_id"],
+            "evaluation_date": "2026-10-22T12:00:00Z",
+            "general_observations": "Cuadro agudo indeterminado",
+        },
+        headers=headers,
+    )
+    assert eval_noclas_res.status_code == 201
+    eval_noclas_data = eval_noclas_res.json()
+    assert eval_noclas_data["aphasia_type_id"] == no_clasificada["aphasia_type_id"]
+
+    detail_noclas_res = await client.get(f"/api/v1/evaluations/{eval_noclas_data['evaluation_id']}", headers=headers)
+    assert detail_noclas_res.status_code == 200
+    assert detail_noclas_res.json()["aphasia_type"]["name"] == "No clasificada"
+
+
+@pytest.mark.integration
+async def test_evaluation_reject_nonexistent_aphasia_type(client: AsyncClient, professional_token: str):
+    """Verifica que asociar un identificador de tipo de afasia inexistente retorne 404."""
+    headers = {"Authorization": f"Bearer {professional_token}"}
+
+    patient_res = await client.post(
+        "/api/v1/patients",
+        json={
+            "patient_code": "PAC-APH-ERR-01",
+            "first_name": "Beatriz",
+            "last_name": "Nuñez",
+            "date_of_birth": "1970-01-10",
+        },
+        headers=headers,
+    )
+    patient_id = patient_res.json()["patient_id"]
+
+    proto_res = await client.get("/api/v1/protocols", headers=headers)
+    protocol_id = proto_res.json()[0]["protocol_id"]
+
+    fake_aphasia_id = uuid.uuid4()
+
+    # Creación con afasia inexistente -> 404
+    res = await client.post(
+        f"/api/v1/patients/{patient_id}/evaluations",
+        json={
+            "protocol_id": protocol_id,
+            "aphasia_type_id": str(fake_aphasia_id),
+            "evaluation_date": "2026-10-22T14:00:00Z",
+        },
+        headers=headers,
+    )
+    assert res.status_code == 404
+    assert res.json()["error"]["code"] == "ENTITY_NOT_FOUND"
+
+
+@pytest.mark.integration
+async def test_evaluation_reject_cross_patient_clinical_event(client: AsyncClient, professional_token: str):
+    """
+    Verifica que no se pueda vincular un evento clínico perteneciente a otro paciente
+    (integridad referencial de negocio).
+    """
+    headers = {"Authorization": f"Bearer {professional_token}"}
+
+    # Crear Paciente A y su evento
+    p_a_res = await client.post(
+        "/api/v1/patients",
+        json={"patient_code": "PAC-CROSS-A", "first_name": "A", "last_name": "A", "date_of_birth": "1980-01-01"},
+        headers=headers,
+    )
+    patient_a_id = p_a_res.json()["patient_id"]
+
+    evt_res = await client.post(
+        f"/api/v1/patients/{patient_a_id}/clinical-events",
+        json={"event_type": "ACV", "event_date": "2026-05-01"},
+        headers=headers,
+    )
+    event_a_id = evt_res.json()["clinical_event_id"]
+
+    # Crear Paciente B
+    p_b_res = await client.post(
+        "/api/v1/patients",
+        json={"patient_code": "PAC-CROSS-B", "first_name": "B", "last_name": "B", "date_of_birth": "1985-01-01"},
+        headers=headers,
+    )
+    patient_b_id = p_b_res.json()["patient_id"]
+
+    proto_res = await client.get("/api/v1/protocols", headers=headers)
+    protocol_id = proto_res.json()[0]["protocol_id"]
+
+    # Intentar crear evaluación para Paciente B asociando el evento del Paciente A -> 422
+    eval_res = await client.post(
+        f"/api/v1/patients/{patient_b_id}/evaluations",
+        json={
+            "protocol_id": protocol_id,
+            "clinical_event_id": event_a_id,
+            "evaluation_date": "2026-10-22T15:00:00Z",
+        },
+        headers=headers,
+    )
+    assert eval_res.status_code == 422

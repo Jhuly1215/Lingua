@@ -1,17 +1,24 @@
 import uuid
 from datetime import date, datetime
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ClinicalEventBase(BaseModel):
     """Atributos de eventos clínicos neurológicos."""
-    event_type: str = Field(..., max_length=100, description="Tipo de evento neurológico (ej. ACV Isquémico, ACV Hemorrágico, TCE)")
+    event_type: str = Field(..., min_length=1, max_length=100, description="Tipo de evento neurológico (ej. ACV Isquémico, ACV Hemorrágico, TCE)")
     event_date: date = Field(..., description="Fecha de ocurrencia del evento clínico")
     description: Optional[str] = Field(None, description="Descripción detallada del evento y cuadro agudo")
     event_severity: Optional[str] = Field(None, max_length=50, description="Severidad intrínseca del evento (Leve, Moderada, Severa, Crítica)")
     lesion_location: Optional[str] = Field(None, max_length=150, description="Localización neuroanatómica de la lesión")
     lesion_hemisphere: Optional[str] = Field(None, max_length=30, description="Hemisferio de la lesión (Izquierdo, Derecho, Bilateral)")
+
+    @field_validator("event_type")
+    @classmethod
+    def validate_event_type_not_empty(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("El tipo de evento clínico no puede estar vacío.")
+        return v.strip()
 
 
 class ClinicalEventCreate(ClinicalEventBase):
@@ -21,13 +28,20 @@ class ClinicalEventCreate(ClinicalEventBase):
 
 class ClinicalEventUpdate(BaseModel):
     """Esquema de actualización para eventos clínicos."""
-    event_type: Optional[str] = Field(None, max_length=100)
+    event_type: Optional[str] = Field(None, min_length=1, max_length=100)
     event_date: Optional[date] = None
     description: Optional[str] = None
     event_severity: Optional[str] = Field(None, max_length=50)
     lesion_location: Optional[str] = Field(None, max_length=150)
     lesion_hemisphere: Optional[str] = Field(None, max_length=30)
     active: Optional[bool] = None
+
+    @field_validator("event_type")
+    @classmethod
+    def validate_event_type_not_empty(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not v.strip():
+            raise ValueError("El tipo de evento clínico no puede estar vacío.")
+        return v.strip() if v is not None else None
 
 
 class ClinicalEventResponse(ClinicalEventBase):

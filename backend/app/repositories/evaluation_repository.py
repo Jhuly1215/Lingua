@@ -23,6 +23,9 @@ class EvaluationRepository(BaseRepository[Evaluation]):
                 selectinload(Evaluation.patient),
                 selectinload(Evaluation.protocol),
                 selectinload(Evaluation.evaluator),
+                selectinload(Evaluation.aphasia_type),
+                selectinload(Evaluation.severity_level),
+                selectinload(Evaluation.clinical_event),
             )
             .where(Evaluation.evaluation_id == evaluation_id, Evaluation.active == True)
         )
