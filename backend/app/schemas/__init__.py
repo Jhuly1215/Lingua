@@ -38,6 +38,11 @@ from app.schemas.response import (
     FASConditionScoreResponse,
     FASEvaluationSummaryResponse,
 )
+from app.schemas.audio import (
+    AudioResponse,
+    AudioSignedUrlResponse,
+    AudioUploadResponse,
+)
 
 __all__ = [
     "PaginatedResponse",
@@ -74,4 +79,7 @@ __all__ = [
     "FASErrorsBreakdown",
     "FASConditionScoreResponse",
     "FASEvaluationSummaryResponse",
+    "AudioResponse",
+    "AudioSignedUrlResponse",
+    "AudioUploadResponse",
 ]

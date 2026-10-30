@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = "https://placeholder-project.supabase.co"
     SUPABASE_ANON_KEY: str = "placeholder-anon-key"
     SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
+    SUPABASE_STORAGE_BUCKET: str = "lingua-audios"
 
     # --- JWT / Seguridad ---
     JWT_AUDIENCE: str = "authenticated"

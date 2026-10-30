@@ -6,6 +6,7 @@ from app.repositories.consent_repository import ConsentRepository
 from app.repositories.evaluation_repository import EvaluationRepository
 from app.repositories.protocol_repository import ProtocolRepository
 from app.repositories.response_repository import ResponseRepository
+from app.repositories.audio_repository import AudioRepository
 
 __all__ = [
     "BaseRepository",
@@ -16,4 +17,6 @@ __all__ = [
     "EvaluationRepository",
     "ProtocolRepository",
     "ResponseRepository",
+    "AudioRepository",
 ]
+
