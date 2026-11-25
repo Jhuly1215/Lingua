@@ -1,0 +1,8 @@
+schema_version: "1.0"
+project:
+  name: "LINGUA"
+  description: "Plataforma Computacional para la Investigación y Caracterización del Lenguaje en Personas con Afasia"
+  version: "0.2.0"
+  architecture: "Monolito Modular FastAPI + SQLAlchemy 2.x async + PostgreSQL/Supabase"
+  created_at: "2026-11-24"
+  default_locale: "es"
